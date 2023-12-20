@@ -2,7 +2,7 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
-// 函數用於將 MIME 類型映射到文件擴展名
+// Function to map MIME types to file extensions
 function getExtensionFromMimeType(mimeType) {
   const mimeMap = {
     'application/pdf': '.pdf',
@@ -11,12 +11,20 @@ function getExtensionFromMimeType(mimeType) {
     'image/png': '.png',
     'text/plain': '.txt',
     'text/html': '.html',
-    // 根據需要添加更多映射
+    // Add more mappings as needed
   }
   return mimeMap[mimeType] || ''
 }
 
-// 處理和校正不同的 URL 方案
+// Function to decode URL if needed
+function decodeIfNeeded(urlStr) {
+  if (urlStr.includes('%')) {
+    return decodeURIComponent(urlStr);
+  }
+  return urlStr;
+}
+
+// Function to handle and correct various URL schemes
 function correctUrlScheme(urlStr) {
   if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('ftp://')) {
     return urlStr;
@@ -24,43 +32,102 @@ function correctUrlScheme(urlStr) {
   return 'https://' + urlStr;
 }
 
+// Function to extract a filename from the URL or generate one
+function getFilenameFromUrl(urlStr, contentType) {
+  const url = new URL(urlStr);
+  let filename = url.pathname.split('/').pop();
+
+  if (filename.includes('.')) {
+    return filename; // Return the filename if it has an extension
+  }
+
+  const extension = getExtensionFromMimeType(contentType);
+  if (extension) {
+    return filename + extension; // Append extension based on MIME type
+  }
+
+  return 'download' + (extension || '.bin'); // Generic filename if no extension found
+}
+
 async function handleRequest(request) {
   const url = new URL(request.url)
 
-  // 檢查請求 URL 路徑是否以 "/proxy/" 開頭
   if (url.pathname.startsWith("/proxy/")) {
-    // 從請求路徑中提取實際的 URL 進行下載
     let targetUrl = url.pathname.replace("/proxy/", "")
-    targetUrl = correctUrlScheme(targetUrl)
+    targetUrl = correctUrlScheme(decodeIfNeeded(targetUrl))
 
     try {
-      // 從目標 URL 獲取內容
-      const response = await fetch(targetUrl, {
-        method: 'GET', // 強制使用 GET 方法進行下載
-      })
+      const response = await fetch(targetUrl, { method: 'GET' })
 
-      // 檢查響應是否正常
       if (!response.ok) {
         return new Response('Error fetching the content', { status: response.status })
       }
 
-      // 從響應中獲取 MIME 類型
       const contentType = response.headers.get('content-type')
-      // 根據 MIME 類型確定文件擴展名
-      const extension = getExtensionFromMimeType(contentType)
-
-      // 為下載設置適當擴展名的文件名
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = contentDisposition ? contentDisposition.split('filename=')[1] : getFilenameFromUrl(targetUrl, contentType);
       const headers = new Headers(response.headers)
-      const disposition = 'attachment; filename="download' + extension + '"'
-      headers.set('Content-Disposition', disposition)
-
+      headers.set('Content-Disposition', `attachment; filename="${filename}"`)
+      
       return new Response(response.body, { headers })
     } catch (error) {
-      // 處理在獲取過程中出現的任何錯誤
       return new Response('Error fetching the content: ' + error.message, { status: 500 })
     }
+  } else if (url.pathname === "/") {
+    // Serve the HTML for the main page
+    const htmlUI = `
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Proxy Downloader</title>
+          <style>
+              body {
+                  font-family: Arial, sans-serif;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  height: 100vh;
+                  margin: 0;
+              }
+              .container {
+                  text-align: center;
+              }
+              input[type="text"] {
+                  width: 300px;
+                  padding: 10px;
+                  margin-bottom: 10px;
+              }
+              button {
+                  padding: 10px 20px;
+                  cursor: pointer;
+              }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <h1>Proxy Downloader</h1>
+              <input type="text" id="urlInput" placeholder="Enter URL to download">
+              <button onclick="download()">Download</button>
+          </div>
+
+          <script>
+              function download() {
+                  const url = document.getElementById('urlInput').value;
+                  if (url) {
+                      const workerURL = '/proxy/';
+                      window.open(workerURL + encodeURIComponent(url), '_blank');
+                  }
+              }
+          </script>
+      </body>
+      </html>
+    `;
+
+    return new Response(htmlUI, {
+      headers: { 'Content-Type': 'text/html' }
+    });
   }
 
-  // 如果路徑不是以 "/proxy/" 開頭，則返回一個簡單的信息
   return new Response("Cloudflare Worker Proxy", { status: 200 })
 }
