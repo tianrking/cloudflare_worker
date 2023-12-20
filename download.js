@@ -172,16 +172,33 @@ async function handleRequest(request) {
             document.getElementById('curlCommands').textContent = commands;
         }
 
-        function downloadFiles() {
-            const urls = document.getElementById('urlInput').value.split(',');
-            urls.forEach(url => {
-                if (url.trim() !== '') {
-                    const workerURL = '/proxy/';
-                    const fullUrl = window.location.origin + workerURL + encodeURIComponent(url.trim());
-                    window.open(fullUrl, '_blank');
-                }
-            });
-        }
+        async function downloadFiles() {
+          const urls = document.getElementById('urlInput').value.split(',');
+          urls.forEach(async (url) => {
+              if (url.trim() !== '') {
+                  const workerURL = '/proxy/';
+                  const fullUrl = window.location.origin + workerURL + encodeURIComponent(url.trim());
+
+                  try {
+                      const response = await fetch(fullUrl);
+                      if (!response.ok) {
+                          throw new Error('Network response was not ok.');
+                      }
+                      const blob = await response.blob();
+                      const downloadUrl = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = downloadUrl;
+                      a.download = url.trim().split('/').pop();
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(downloadUrl);
+                  } catch (error) {
+                      console.error('Fetch error:', error);
+                  }
+              }
+          });
+      }
     </script>
     </body>
     </html>
