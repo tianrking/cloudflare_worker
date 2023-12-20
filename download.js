@@ -127,27 +127,60 @@ async function handleRequest(request) {
             button:hover {
                 background-color: #43a047;
             }
+            textarea, pre {
+              width: 90%; /* 調整寬度為 90% */
+              max-width: 600px; /* 最大寬度限制 */
+              margin: 10px auto; /* 居中顯示 */
+            }
+            textarea {
+                height: 100px; /* 設定初始高度 */
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+            }
+            pre {
+                padding: 10px;
+                background: #eaeaea;
+                border-radius: 5px;
+                overflow-x: auto; /* 添加滾動條 */
+                white-space: pre-wrap; /* 換行顯示 */
+                word-wrap: break-word; /* 長單詞換行 */
+            }
         </style>
         
     </head>
     <body>
     <div class="container">
         <h1>Proxy Downloader</h1>
-        <input type="text" id="urlInput" placeholder="Enter URL to download">
-        <button onclick="generateCurlCommand()">Download</button>
-        <pre id="curlCommand" style="margin-top: 20px; background: #eaeaea; padding: 10px; border-radius: 5px;"></pre>
+        <textarea id="urlInput" placeholder="Enter URLs separated by commas" oninput="generateCurlCommands()"></textarea>
+        <button onclick="downloadFiles()">Download</button>
+        <pre id="curlCommands"></pre>
     </div>
 
     <script>
-        function generateCurlCommand() {
-            const url = document.getElementById('urlInput').value;
-            const workerURL = '/proxy/';
-            const fullUrl = window.location.origin + workerURL + encodeURIComponent(url);
-            const curlCommand = 'curl "' + fullUrl + '" --output ' + url.split('/').pop();
-            document.getElementById('curlCommand').textContent = curlCommand;
+        function generateCurlCommands() {
+            const urls = document.getElementById('urlInput').value.split(',');
+            let commands = '';
+            urls.forEach(url => {
+                if (url.trim() !== '') {
+                    const workerURL = '/proxy/';
+                    const fullUrl = window.location.origin + workerURL + encodeURIComponent(url.trim());
+                    const filename = url.trim().split('/').pop();
+                    commands += 'curl "' + fullUrl + '" --output ' + filename + '\\n';
+                }
+            });
+            document.getElementById('curlCommands').textContent = commands;
+        }
 
-            // Optional: Automatically copy the command to clipboard
-            navigator.clipboard.writeText(curlCommand);
+        function downloadFiles() {
+            const urls = document.getElementById('urlInput').value.split(',');
+            urls.forEach(url => {
+                if (url.trim() !== '') {
+                    const workerURL = '/proxy/';
+                    const fullUrl = window.location.origin + workerURL + encodeURIComponent(url.trim());
+                    window.open(fullUrl, '_blank');
+                }
+            });
         }
     </script>
     </body>
