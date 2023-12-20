@@ -82,66 +82,74 @@ async function handleRequest(request) {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Proxy Downloader</title>
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
         <style>
             body {
-                font-family: 'Arial', sans-serif;
+                font-family: 'Open Sans', sans-serif;
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 height: 100vh;
                 margin: 0;
-                background: #f4f7f6;
+                background: #eaeaea;
                 color: #333;
             }
             .container {
                 text-align: center;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                 background: white;
-                max-width: 400px;
+                max-width: 450px;
             }
             h1 {
                 color: #4CAF50;
+                font-weight: 600;
+                margin-bottom: 20px;
             }
             input[type="text"] {
                 width: 90%;
-                padding: 10px;
-                margin-bottom: 10px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
+                padding: 12px;
+                margin-bottom: 20px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
             }
             button {
-                padding: 10px 20px;
+                padding: 10px 25px;
                 cursor: pointer;
                 background-color: #4CAF50;
                 border: none;
-                border-radius: 5px;
+                border-radius: 8px;
                 color: white;
-                font-size: 16px;
+                font-size: 18px;
                 transition: background-color 0.3s;
             }
             button:hover {
-                background-color: #45a049;
+                background-color: #43a047;
             }
         </style>
+        
     </head>
     <body>
-        <div class="container">
-            <h1>Proxy Downloader</h1>
-            <input type="text" id="urlInput" placeholder="Enter URL to download">
-            <button onclick="download()">Download</button>
-        </div>
+    <div class="container">
+        <h1>Proxy Downloader</h1>
+        <input type="text" id="urlInput" placeholder="Enter URL to download">
+        <button onclick="generateCurlCommand()">Download</button>
+        <pre id="curlCommand" style="margin-top: 20px; background: #eaeaea; padding: 10px; border-radius: 5px;"></pre>
+    </div>
 
-        <script>
-            function download() {
-                const url = document.getElementById('urlInput').value;
-                if (url) {
-                    const workerURL = '/proxy/';
-                    window.open(workerURL + encodeURIComponent(url), '_blank');
-                }
-            }
-        </script>
+    <script>
+        function generateCurlCommand() {
+            const url = document.getElementById('urlInput').value;
+            const workerURL = '/proxy/';
+            const fullUrl = window.location.origin + workerURL + encodeURIComponent(url);
+            const curlCommand = 'curl "' + fullUrl + '" --output ' + url.split('/').pop();
+            document.getElementById('curlCommand').textContent = curlCommand;
+
+            // Optional: Automatically copy the command to clipboard
+            navigator.clipboard.writeText(curlCommand);
+        }
+    </script>
     </body>
     </html>
   `;
