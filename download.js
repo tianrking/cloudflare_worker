@@ -2,13 +2,36 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
+// 函數用於將 MIME 類型映射到文件擴展名
+function getExtensionFromMimeType(mimeType) {
+  const mimeMap = {
+    'application/pdf': '.pdf',
+    'application/zip': '.zip',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'text/plain': '.txt',
+    'text/html': '.html',
+    // 根據需要添加更多映射
+  }
+  return mimeMap[mimeType] || ''
+}
+
+// 處理和校正不同的 URL 方案
+function correctUrlScheme(urlStr) {
+  if (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('ftp://')) {
+    return urlStr;
+  }
+  return 'https://' + urlStr;
+}
+
 async function handleRequest(request) {
   const url = new URL(request.url)
 
   // 檢查請求 URL 路徑是否以 "/proxy/" 開頭
   if (url.pathname.startsWith("/proxy/")) {
     // 從請求路徑中提取實際的 URL 進行下載
-    const targetUrl = url.pathname.replace("/proxy/", "http://")
+    let targetUrl = url.pathname.replace("/proxy/", "")
+    targetUrl = correctUrlScheme(targetUrl)
 
     try {
       // 從目標 URL 獲取內容
@@ -21,9 +44,16 @@ async function handleRequest(request) {
         return new Response('Error fetching the content', { status: response.status })
       }
 
-      // 將獲取的內容作為可下載文件返回
+      // 從響應中獲取 MIME 類型
+      const contentType = response.headers.get('content-type')
+      // 根據 MIME 類型確定文件擴展名
+      const extension = getExtensionFromMimeType(contentType)
+
+      // 為下載設置適當擴展名的文件名
       const headers = new Headers(response.headers)
-      headers.set('Content-Disposition', 'attachment')
+      const disposition = 'attachment; filename="download' + extension + '"'
+      headers.set('Content-Disposition', disposition)
+
       return new Response(response.body, { headers })
     } catch (error) {
       // 處理在獲取過程中出現的任何錯誤
